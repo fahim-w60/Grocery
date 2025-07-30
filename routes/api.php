@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\admin\StoreController;
 use App\Http\Controllers\admin\CategoryController;
+use App\Http\Controllers\ShopperController;
 
 
 /*
@@ -57,6 +58,15 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
         Route::post('searchCategory', 'searchCategory');
         Route::get('getAllCategories', 'getAllCategories');
         Route::delete('deleteCategory/{id}', 'deleteCategory');
+    });
+});
+
+//Shopper Routes
+Route::group(['prefix' => 'shopper', 'middleware' => ['jwt.auth', 'admin']], function(){
+    Route::controller(ShopperController::class)->group(function(){
+        Route::get('getAllShoppers', 'getAllShoppers');
+        Route::get('getShopper/{id}', 'getShopper');
+        Route::post('makeShopper', 'makeShopper');
     });
 });
 
