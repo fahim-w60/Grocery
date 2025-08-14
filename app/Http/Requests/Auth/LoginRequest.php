@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
                 'required', 
                 'string', 
                 'min:8', 
-                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]+$/',
             ],
         ];
     }

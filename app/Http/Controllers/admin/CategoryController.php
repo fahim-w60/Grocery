@@ -60,9 +60,11 @@ class CategoryController extends Controller
     {
         $validatedData = $request->validated();
         $searchTerm = $validatedData['search'] ?? '';
-        // dd($searchTerm);
+        $perPage = $request->input('per_page', 20); // Default to 20 if not provided
 
-        $categories = Category::where('name', 'LIKE', '%' . $searchTerm . '%')->get();
+        $categories = Category::where('name', 'LIKE', '%' . $searchTerm . '%')
+            ->select('id', 'name')
+            ->paginate($perPage);
 
         return response()->json([
             'status' => true,

@@ -43,7 +43,7 @@ class RegisterRequest extends FormRequest
                 'required',
                 'string',
                 'min:8',
-                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]+$/',
             ],
         ];
     }
@@ -61,7 +61,7 @@ class RegisterRequest extends FormRequest
             'password.required' => 'The password field is required.',
             'password.string' => 'The password must be a string.',
             'password.min' => 'The password must be at least 8 characters.',
-            'password.regex' => 'The password must contain at least one letter, one number, and one special character (@, $, !, %, *, ?, or &).',
+            'password.regex' => 'The password must contain at least one letter, one number, and one special character (@, $, !, %, *, ?, &, or #).',
         ];
     }
 }

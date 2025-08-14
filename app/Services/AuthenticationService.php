@@ -42,7 +42,8 @@ class AuthenticationService
 
         try {
             if (!empty($user->email)) {
-                Mail::to($user->email)->queue(new SendOtpMail($otp, $user));
+                Mail::to($user->email)
+                ->queue((new SendOtpMail($otp, $user))->onQueue('high'));
             }
             else {
                 return response()->json([
@@ -67,14 +68,19 @@ class AuthenticationService
     {
         $credentials = ['password' => $data['password']];
 
-        if(isset($data['email'])){
-            $credentials['email'] = $data['email'];
+        if(!isset($data['email'])){
+            throw new \Exception('Email is required.');
         }
-        else{
-            return response()->json([
-                'status' => false,
-                'message' => 'Email is not found.',
-            ], 400);
+        
+        $credentials['email'] = $data['email'];
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (!$user) {
+            throw new \Exception('User not found.');
+        }
+
+        if (is_null($user->email_verified_at)) {
+            throw new \Exception('Please verify your email address before logging in.');
         }
 
         if(!$token = JWTAuth::attempt($credentials)) {
@@ -189,7 +195,8 @@ class AuthenticationService
 
         try {
             if (!empty($user->email)) {
-                Mail::to($user->email)->queue(new SendOtpMail($otp, $user));
+                Mail::to($user->email)
+                ->queue((new SendOtpMail($otp, $user))->onQueue('high'));
             }
         } catch (Exception $e) {
       

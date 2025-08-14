@@ -23,6 +23,7 @@ class SearchRequest extends FormRequest
     {
         return [
             'search' => 'required|string|max:255',
+            'per_page' => 'sometimes|integer|min:1|max:100',
         ];
     }
 
@@ -32,6 +33,9 @@ class SearchRequest extends FormRequest
             'search.required' => 'The search field is required.',
             'search.string' => 'The search must be a string.',
             'search.max' => 'The search may not be greater than 255 characters.',
+            'per_page.integer' => 'The per_page value must be an integer.',
+            'per_page.min' => 'The per_page value must be at least 1.',
+            'per_page.max' => 'The per_page value may not be greater than 100.',
         ];
     }
 }

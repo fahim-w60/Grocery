@@ -3,11 +3,23 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build"
+        "build": "vite build",
+        "websocket": "node start-websocket.js",
+        "websocket:dev": "nodemon --watch server.js --watch .env.websocket --exec npm run websocket",
+        "dev:all": "concurrently \"npm run dev\" \"npm run websocket:dev\""
+    },
+    "dependencies": {
+        "axios": "^1.11.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.6.1",
+        "express": "^4.21.2",
+        "jsonwebtoken": "^9.0.2",
+        "socket.io": "^4.8.1"
     },
     "devDependencies": {
-        "axios": "^1.6.4",
+        "concurrently": "^8.2.1",
         "laravel-vite-plugin": "^1.0.0",
+        "nodemon": "^3.0.1",
         "vite": "^5.0.0"
     }
 }

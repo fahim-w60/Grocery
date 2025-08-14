@@ -28,7 +28,7 @@ class ChangePasswordRequest extends FormRequest
                 'required', 
                 'string', 
                 'min:8', 
-                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]+$/',
                 Rule::notIn([$this->password]),
             ],
             'confirmed_password' => [
@@ -36,7 +36,7 @@ class ChangePasswordRequest extends FormRequest
                 'string', 
                 'min:8', 
                 'same:new_password', 
-                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]+$/',
             ],
         ];
     }

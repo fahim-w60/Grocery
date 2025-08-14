@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_DRIVER', 'null'),
+    'default' => 'socketio',
 
     /*
     |--------------------------------------------------------------------------
@@ -30,21 +30,26 @@ return [
 
     'connections' => [
 
-        'pusher' => [
-            'driver' => 'pusher',
-            'key' => env('PUSHER_APP_KEY'),
-            'secret' => env('PUSHER_APP_SECRET'),
-            'app_id' => env('PUSHER_APP_ID'),
+        'socketio' => [
+            'driver' => 'socket.io',
+            'host' => env('SOCKET_HOST', '127.0.0.1'),
+            'port' => (int) env('SOCKET_PORT', 3001),
+            'scheme' => env('SOCKET_SCHEME', 'http'),
             'options' => [
-                'cluster' => env('PUSHER_APP_CLUSTER'),
-                'host' => env('PUSHER_HOST') ?: 'api-'.env('PUSHER_APP_CLUSTER', 'mt1').'.pusher.com',
-                'port' => env('PUSHER_PORT', 443),
-                'scheme' => env('PUSHER_SCHEME', 'https'),
-                'encrypted' => true,
-                'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
+                'secure' => false,
+                'reconnect' => true,
+                'transports' => ['websocket'],
             ],
-            'client_options' => [
-                // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+        ],
+
+        'socketio' => [
+            'driver' => 'socket.io',
+            'host' => env('SOCKETIO_HOST', 'localhost'),
+            'port' => env('SOCKETIO_PORT', 3001),
+            'namespace' => 'App\Events',
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
             ],
         ],
 

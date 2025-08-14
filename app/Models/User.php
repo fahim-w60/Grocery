@@ -8,6 +8,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Tymon\JWTAuth\Contracts\JWTSubject; 
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Cart;
+use App\Models\Wishlist;
+use App\Models\Card;
+
+
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -60,5 +66,48 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [];
+    }
+
+    /**
+     * Check if the user is an admin.
+     *
+     * @return bool
+     */
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+    
+    /**
+     * Check if the user is a shopper.
+     *
+     * @return bool
+     */
+    public function isShopper()
+    {
+        return $this->role === 'shopper';
+    }
+
+    public function carts()
+    {
+        return $this->hasMany(Cart::class);
+    }
+
+    public function wishlists()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function cards()
+    {
+        return $this->hasMany(Card::class);
+    }
+    public function personalShopper()
+    {
+        return $this->hasOne(User::class, 'id', 'shopper_id');
+    }
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
     }
 }

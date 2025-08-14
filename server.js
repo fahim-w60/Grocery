@@ -1,0 +1,116 @@
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+ 
+
+const app = express();
+app.use(express.json()); // Enable JSON body parsing
+const server = createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+    },
+});
+ 
+const users = {};
+const groups = {};
+
+// REST endpoint to send a private message via Postman
+app.post('/send-message', (req, res) => {
+    const { userId, message } = req.body;
+    if (!userId || !message) {
+        return res.status(400).json({ error: 'userId and message are required.' });
+    }
+    if (users[userId]) {
+        io.to(users[userId]).emit("private-message", { message });
+        return res.json({ success: true, delivered: true });
+    } else {
+        return res.status(404).json({ error: "User not connected" });
+    }
+});
+ 
+io.on("connection", (socket) => {
+    const userId = socket.handshake.query.userId;
+    users[userId] = socket.id;
+    console.log("socket is", socket.id, "user id ", userId);
+    console.log(users);
+    // console.log(`User connected: ${socket.id}`);
+ 
+    // 'login' event with socket ID
+    // socket.on("login", ({ userId }) => {
+    //     users[userId] = socket.id;
+    //     console.log(`User logged in: ${userId}`);
+    //     io.emit("login", userId);
+    // });
+ 
+    // private messages
+    socket.on("private-message", ({ receiverId, message, created_at }) => {
+        const senderId = socket.id;
+        console.log(
+            `Sending private message from ${userId} to ${receiverId}: ${message}`
+        );
+        // Check if the receiver is online
+        if (users[receiverId]) {
+            io.to(users[receiverId]).emit("private-message", {
+                receiver_id: receiverId,
+                sender_id: userId,
+                message,
+                created_at,
+            });
+            // io.to(senderId).emit("private-message", {
+            //     senderId,
+            //     message,
+            // });
+        } else {
+            console.log(`User ${receiverId} not found or offline.`);
+        }
+    });
+ 
+    // Join a group
+    socket.on("join_group", ({ userId, groupId }) => {
+        socket.join(groupId);
+        if (!groups[groupId]) {
+            groups[groupId] = [];
+        }
+        groups[groupId].push(userId);
+        console.log(`User ${userId} joined group ${groupId}`);
+ 
+        io.to(groupId).emit("join_group", `${userId} has joined the group.`);
+    });
+ 
+    // Leave a group
+    socket.on("leave_group", ({ userId, groupId }) => {
+        socket.leave(groupId); // Remove user from the group room
+        if (groups[groupId]) {
+            groups[groupId] = groups[groupId].filter((id) => id !== userId); // Remove user from group list
+        }
+        console.log(`User ${userId} left group ${groupId}`);
+ 
+        io.to(groupId).emit("leave_group", `${userId} has left the group.`);
+    });
+ 
+    // group messages
+    socket.on("group_message", ({ groupId, senderId, message }) => {
+        console.log(`Group message in ${groupId} from ${senderId}: ${message}`);
+ 
+        io.to(groupId).emit("group_message", { senderId, message });
+    });
+ 
+    // Handle user disconnection and clean up
+    socket.on("disconnect", () => {
+        // console.log(`User disconnected: ${socket.id}`);
+ 
+        // Clean up user from the users object
+        for (const [userId, socketId] of Object.entries(users)) {
+            if (socketId === socket.id) {
+                delete users[userId];
+                break;
+            }
+        }
+        // console.log("Current users:", users);
+    });
+});
+ 
+server.listen(3100, "10.10.10.63", () => {
+    console.log("Server running at http://10.10.10.63:3100");
+});

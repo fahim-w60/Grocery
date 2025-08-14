@@ -9,24 +9,63 @@ window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-/**
- * Echo exposes an expressive API for subscribing to channels and listening
- * for events that are broadcast by Laravel. Echo and event broadcasting
- * allows your team to easily build robust real-time web applications.
- */
+// Add the CSRF token to all axios requests
+const token = document.head.querySelector('meta[name="csrf-token"]');
+if (token) {
+    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+} else {
+    console.error('CSRF token not found');
+}
 
-// import Echo from 'laravel-echo';
+// Add authorization header if user is authenticated
+const userMeta = document.head.querySelector('meta[name="user-id"]');
+const authToken = localStorage.getItem('auth_token');
 
-// import Pusher from 'pusher-js';
-// window.Pusher = Pusher;
+if (authToken) {
+    window.axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+}
 
-// window.Echo = new Echo({
-//     broadcaster: 'pusher',
-//     key: import.meta.env.VITE_PUSHER_APP_KEY,
-//     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'mt1',
-//     wsHost: import.meta.env.VITE_PUSHER_HOST ? import.meta.env.VITE_PUSHER_HOST : `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER}.pusher.com`,
-//     wsPort: import.meta.env.VITE_PUSHER_PORT ?? 80,
-//     wssPort: import.meta.env.VITE_PUSHER_PORT ?? 443,
-//     forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
-//     enabledTransports: ['ws', 'wss'],
-// });
+// Initialize WebSocket connection when needed
+const initWebSocket = () => {
+    if (authToken) {
+        import('./services/socketService').then(({ default: socketService }) => {
+            socketService.connect(authToken);
+            
+            // Store socket service in window for easy access
+            window.socketService = socketService;
+            
+            // Listen for new messages
+            socketService.on('message', (message) => {
+                // You can dispatch a custom event or handle the message here
+                const event = new CustomEvent('new-message', { detail: message });
+                window.dispatchEvent(event);
+            });
+            
+            // Listen for typing indicators
+            socketService.on('typing', (data) => {
+                const event = new CustomEvent('user-typing', { detail: data });
+                window.dispatchEvent(event);
+            });
+            
+            // Listen for user online/offline status
+            socketService.on('user-online', (data) => {
+                const event = new CustomEvent('user-online', { detail: data });
+                window.dispatchEvent(event);
+            });
+            
+            socketService.on('user-offline', (data) => {
+                const event = new CustomEvent('user-offline', { detail: data });
+                window.dispatchEvent(event);
+            });
+        }).catch(error => {
+            console.error('Error initializing WebSocket:', error);
+        });
+    }
+};
+
+// Initialize WebSocket when the DOM is fully loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWebSocket);
+} else {
+    initWebSocket();
+}

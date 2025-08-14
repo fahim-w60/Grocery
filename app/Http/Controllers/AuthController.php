@@ -54,17 +54,24 @@ class AuthController extends Controller
             $result = $this->authenticationService->loginuser($validatedData);
             return response()->json([
                 'status' => true,
-                'message' => 'User Logged in successfully',
+                'message' => 'User logged in successfully',
                 'token' => $result['token'],
                 'user' => $result['user'],
             ], 200);
-        }
-        catch (Exception $e)
-        {
+        } catch (\Exception $e) {
+            $statusCode = 401; // Default status code for authentication failures
+            $message = $e->getMessage();
+
+            if (str_contains($message, 'Email is required')) {
+                $statusCode = 400;
+            } elseif (str_contains($message, 'User not found')) {
+                $statusCode = 404;
+            }
+
             return response()->json([
                 'status' => false,
-                'message' => 'Failed to login: ' . $e->getMessage(),
-            ], 500);
+                'message' => $message,
+            ], $statusCode);
         }
     }
 
