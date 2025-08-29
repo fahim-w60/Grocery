@@ -11,23 +11,8 @@ const io = new Server(server, {
         origin: "*",
     },
 });
- 
 const users = {};
 const groups = {};
-
-// REST endpoint to send a private message via Postman
-app.post('/send-message', (req, res) => {
-    const { userId, message } = req.body;
-    if (!userId || !message) {
-        return res.status(400).json({ error: 'userId and message are required.' });
-    }
-    if (users[userId]) {
-        io.to(users[userId]).emit("private-message", { message });
-        return res.json({ success: true, delivered: true });
-    } else {
-        return res.status(404).json({ error: "User not connected" });
-    }
-});
  
 io.on("connection", (socket) => {
     const userId = socket.handshake.query.userId;
@@ -110,7 +95,8 @@ io.on("connection", (socket) => {
         // console.log("Current users:", users);
     });
 });
- 
+
+
 server.listen(3100, "10.10.10.63", () => {
     console.log("Server running at http://10.10.10.63:3100");
 });

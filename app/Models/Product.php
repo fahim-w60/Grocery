@@ -17,7 +17,6 @@ class Product extends Model
     {
         return $this->hasMany(Cart::class);
     }
-
     public function wishlists()
     {
         return $this->hasMany(Wishlist::class);
@@ -25,5 +24,10 @@ class Product extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
+    }
+    
+    public function location()
+    {
+        return $this->belongsTo(Location::class, 'locationId', 'locationId');
     }
 }

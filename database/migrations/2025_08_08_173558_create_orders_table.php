@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('order_number')->unique();
-            $table->enum('status', ['order_placed', 'order_confirmed', 'order_pickedup', 'out_for_delivery', 'order_delivered', 'order_cancelled'])->default('order_placed');
+            $table->enum('status', ['pending','order_placed', 'order_confirmed', 'order_pickedup', 'out_for_delivery', 'order_delivered', 'order_cancelled'])->default('order_placed');
             $table->date('delivery_date')->nullable();
             $table->string('delivery_time')->nullable();
-            $table->string('shopper_id')->nullable();
+            $table->unsignedBigInteger('shopper_id')->nullable();
             $table->decimal('tax', 10, 2)->default(0);
             $table->decimal('delivery_charges', 10, 2)->default(0);
             $table->decimal('total', 10, 2)->default(0);

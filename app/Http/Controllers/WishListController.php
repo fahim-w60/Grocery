@@ -44,7 +44,12 @@ class WishListController extends Controller
     public function getWishlist()
     {
         $user = Auth::user();
-        $wishlistItems = Wishlist::with('product')->where('user_id', $user->id)->get();
+        $wishlistItems = Wishlist::with('product')
+            ->where('user_id', $user->id)
+            ->get()
+            ->filter(function($item) {
+                return $item->product !== null;
+            });
 
         $formatted = $wishlistItems->map(function($item) {
             $product = $item->product;
@@ -67,11 +72,12 @@ class WishListController extends Controller
                 'created_at' => $item->created_at,
                 'updated_at' => $item->updated_at,
             ];
-        });
+        })->values();
 
         return response()->json([
             'status' => true,
             'wishlist' => $formatted,
+            'total_items' => $formatted->count()
         ]);
     }
 
@@ -128,6 +134,22 @@ class WishListController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Wishlist item removed successfully',
+        ]);
+    }
+
+    public function deleteAllWishlist()
+    {
+        $user = Auth::user();
+        $today = now()->format('Y-m-d');
+        
+        $deleted = Wishlist::where('user_id', $user->id)
+            ->whereDate('created_at', '!=', $today)
+            ->delete();
+            
+        return response()->json([
+            'status' => true,
+            'message' => 'Successfully removed '.$deleted.' old wishlist item(s) not from today',
+            'items_removed' => $deleted
         ]);
     }
 }

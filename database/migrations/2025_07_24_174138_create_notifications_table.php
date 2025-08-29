@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
             $table->timestamp('read_at')->nullable();
-            $table->string('type')->nullable();
+            $table->string('type')->nullable(); //normal notification,shopper arrive,order pickedup
             $table->bigInteger('order_id')->nullable();
             $table->bigInteger('shopper_id')->nullable();
             $table->timestamps();

@@ -25,7 +25,8 @@ class Order extends Model
         'confirmed_at',
         'picked_up_at',
         'out_for_delivery_at',
-        'delivered_at'
+        'delivered_at',
+        'cancelled_at'
     ];
 
     protected $dates = [
@@ -35,7 +36,8 @@ class Order extends Model
         'confirmed_at',
         'picked_up_at',
         'out_for_delivery_at',
-        'delivered_at'
+        'delivered_at',
+        'cancelled_at'
     ];
 
     // Relationships
@@ -47,6 +49,11 @@ class Order extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function shopper()
+    {
+        return $this->belongsTo(User::class, 'shopper_id');
     }
 
     public function payments()

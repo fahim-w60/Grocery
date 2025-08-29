@@ -140,7 +140,12 @@ class AuthenticationService
             ], 401);
         }
         $user = JWTAuth::user();
-        //dd($user);
+        if ($user && !empty($user->photo) && !filter_var($user->photo, FILTER_VALIDATE_URL)) {
+            $user->photo = asset($user->photo);
+        }
+        else{
+            $user->photo = asset('uploads/profiles/no_image.jpeg');
+        }
         return [
             'user' => $user,
         ];
@@ -154,12 +159,22 @@ class AuthenticationService
 
         if(!$user)
         {
-            return response()->json(['error' => 'Invalid OTP'], 400);
+            return response()->json([
+                'message' => 'Invalid OTP.',
+                'errors' => [
+                    'otp' => ['Invalid OTP.']
+                ]
+            ], 422);
         }
 
         if($user->otp_expire_at < Carbon::now())
         {
-            return response()->json(['error' => 'OTP expired.Please request for a new otp'], 400);
+            return response()->json([
+                'message' => 'OTP expired. Please request a new OTP.',
+                'errors' => [
+                    'otp' => ['OTP expired. Please request a new OTP.']
+                ]
+            ], 422);
         }
 
         $user->email_verified_at = Carbon::now();
@@ -183,7 +198,12 @@ class AuthenticationService
 
         if(!$user)
         {
-            return response()->json(['error' => 'Email is not registered'], 404);
+            return response()->json([
+                'message' => 'The email does not exist in our records.',
+                'errors' => [
+                    'email' => ['The email does not exist in our records.']
+                ]
+            ], 404);
         }
 
         $otp = rand(100000, 999999);
@@ -213,11 +233,16 @@ class AuthenticationService
     }
     public function changePassword($data)
     {
-        $user = User::where('email', $data['email'])->first();
-        if(!$user)
-        {
-            return response()->json(['error' => 'Email is not registeres'], 404);
+        if (!auth()->check()) {
+            return response()->json([
+                'message' => 'User not authenticated.',
+                'errors' => [
+                    'token' => ['Authentication token is missing or invalid.']
+                ]
+            ], 401);
         }
+
+        $user = JWTAuth::user();
 
         $user->password = Hash::make($data['new_password']);
         $user->save();

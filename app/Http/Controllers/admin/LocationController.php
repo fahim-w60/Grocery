@@ -234,14 +234,50 @@ class LocationController extends Controller
         return response()->json($response);
     }
 
-    public function getAllGeolocations()
+    public function getAllGeolocations(Request $request)
     {
-        $geolocations = Geolocation::select('id', 'address', 'city', 'zipCode', 'latitude', 'longitude')->orderBy('address', 'asc')->get();
+        $hasSearch = $request->filled('search');
+        $hasPagination = $request->has('per_page') || $request->has('page');
+        if ($hasSearch || $hasPagination) {
+            $validatedData = $request->validate([
+                'search' => 'nullable|string|max:255',
+                'per_page' => 'sometimes|integer|min:1|max:100',
+                'page' => 'sometimes|integer|min:1',
+            ]);
+
+            $query = Geolocation::select('id', 'address', 'city', 'zipCode', 'latitude', 'longitude');
+
+            if ($hasSearch) {
+                $searchTerm = trim((string) $request->query('search'));
+                $searchTerm = preg_replace('/\s+/', ' ', $searchTerm);
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('address', 'LIKE', '%' . $searchTerm . '%')
+                      ->orWhere('city', 'LIKE', '%' . $searchTerm . '%')
+                      ->orWhere('zipCode', 'LIKE', '%' . $searchTerm . '%');
+                });
+            }
+
+            $perPage = $request->query('per_page', 10);
+            $geolocations = $query->orderBy('id', 'desc')->paginate($perPage);
+
+            $response = [
+                'status' => true,
+                'message' => 'Geolocations fetched successfully',
+                'data' => $geolocations,
+            ];
+
+            return response()->json($response);
+        }
+
+        $geolocations = Geolocation::select('id', 'address', 'city', 'zipCode', 'latitude', 'longitude')
+            ->orderBy('id', 'desc')
+            ->get();
 
         return response()->json([
             'status' => true,
             'message' => 'All geolocations fetched successfully',
-            'geolocations' => $geolocations,
+            'total' => $geolocations->count(),
+            'data' => $geolocations,
         ]);
     }
 

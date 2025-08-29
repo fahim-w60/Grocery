@@ -73,8 +73,9 @@ class TermController extends Controller
             'page' => 'sometimes|integer|min:1',
         ]);
 
-        $searchTerm = $request->query('search');
-        $perPage = $request->query('per_page', 20); // Default to 20 if not provided
+        $searchTerm = trim($request->query('search'));
+        $searchTerm = preg_replace('/\s+/', ' ', $searchTerm);
+        $perPage = $request->query('per_page', 10);
 
         $terms = Term::where('name', 'LIKE', '%' . $searchTerm . '%')
             ->select('id', 'name')
@@ -99,14 +100,44 @@ class TermController extends Controller
         return response()->json($response);
     }
 
-    public function getAllTerms()
+    public function getAllTerms(Request $request)
     {
-        $terms = Term::select('id', 'name')->orderBy('name', 'asc')->get();
+        $hasSearch = $request->filled('search');
+        $hasPagination = $request->has('per_page') || $request->has('page');
+        if ($hasSearch || $hasPagination) {
+            $validatedData = $request->validate([
+                'search' => 'nullable|string|max:255',
+                'per_page' => 'sometimes|integer|min:1|max:100',
+                'page' => 'sometimes|integer|min:1',
+            ]);
+
+            $query = Term::select('id', 'name');
+
+            if ($hasSearch) {
+                $searchTerm = trim((string) $request->query('search'));
+                $searchTerm = preg_replace('/\s+/', ' ', $searchTerm);
+                $query->where('name', 'LIKE', '%' . $searchTerm . '%');
+            }
+
+            $perPage = $request->query('per_page', 10);
+            $terms = $query->orderBy('id', 'desc')->paginate($perPage);
+
+            $response = [
+                'status' => true,
+                'message' => 'Terms fetched successfully',
+                'data' => $terms,
+            ];
+
+            return response()->json($response);
+        }
+
+        $terms = Term::select('id', 'name')->orderBy('id', 'desc')->get();
 
         return response()->json([
             'status' => true,
             'message' => 'All terms fetched successfully',
-            'terms' => $terms,
+            'total' => $terms->count(),
+            'data' => $terms,
         ]);
     }
 

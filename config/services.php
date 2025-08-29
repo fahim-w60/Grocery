@@ -37,4 +37,11 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'nowpayments' => [
+        'api_key' => env('NOWPAYMENTS_API_KEY'),
+        // Ensure boolean casting so "false" (string) is treated as false
+        'test_mode' => filter_var(env('NOWPAYMENTS_TEST_MODE', true), FILTER_VALIDATE_BOOLEAN),
+        'ipn_secret' => env('NOWPAYMENTS_IPN_SECRET'),
+    ],
+
 ];

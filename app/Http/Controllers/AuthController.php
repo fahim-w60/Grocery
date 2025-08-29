@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use App\Services\AuthenticationService;
@@ -52,6 +53,9 @@ class AuthController extends Controller
 
         try {
             $result = $this->authenticationService->loginuser($validatedData);
+            if ($result instanceof JsonResponse) {
+                return $result;
+            }
             return response()->json([
                 'status' => true,
                 'message' => 'User logged in successfully',
@@ -79,6 +83,9 @@ class AuthController extends Controller
     {
         try {
             $result = $this->authenticationService->logoutUser();
+            if ($result instanceof JsonResponse) {
+                return $result;
+            }
 
             return response()->json([
                 'status' => $result['status'],
@@ -97,6 +104,9 @@ class AuthController extends Controller
     public function profile()
     {
         $result = $this->authenticationService->getProfile();          
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
 
         return response()->json([
             'status' => true,
@@ -110,6 +120,11 @@ class AuthController extends Controller
         $validatedData = $request->validated();
 
         $result = $this->authenticationService->verifyOtp($validatedData);
+
+        // If service returned a JsonResponse (e.g., invalid/expired OTP), pass it through
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
 
         return response()->json([
             'status' => true,
@@ -125,6 +140,9 @@ class AuthController extends Controller
         $validatedData = $request->validated();
 
         $result = $this->authenticationService->forgetPassword($validatedData);
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
 
         return response()->json([
             'status' => true,
@@ -139,6 +157,9 @@ class AuthController extends Controller
         $validatedData = $request->validated();
 
         $result = $this->authenticationService->changePassword($validatedData);
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
 
         return response()->json([
             'status' => true,
@@ -153,6 +174,9 @@ class AuthController extends Controller
         $validatedData = $request->validated();
 
         $result = $this->authenticationService->forgetPassword($validatedData);
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
         
         return response()->json([
             'status' => true,

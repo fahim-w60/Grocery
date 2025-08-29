@@ -17,6 +17,7 @@ use App\Http\Controllers\admin\FAQcontroller;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\shopper\ShopperController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,7 +54,11 @@ Route::prefix('app')->middleware('jwt.auth')->group(function(){
         Route::get('/sentMessages', [MessageController::class, 'sentMessages']);
         Route::get('/receivedMessages', [MessageController::class, 'receivedMessages']);
         Route::get('/unreadCount', [MessageController::class, 'unreadCount']);
+        Route::get('message/{id}', [MessageController::class, 'message']);
     });
+
+    Route::get('getAboutApp', [AboutUsController::class, 'getAboutApp']);
+    Route::get('getAllFaqApp', [FAQcontroller::class, 'getAllFaqApp']);
 
     //Home
     Route::get('getAllHomeBanners', [HomeController::class, 'getAllHomeBanners']);
@@ -72,8 +77,12 @@ Route::prefix('app')->middleware('jwt.auth')->group(function(){
     //Face and Finger id
     Route::post('addFaceId', [HomeController::class, 'addFaceId']);
     Route::post('addFingerId', [HomeController::class, 'addFingerId']);
-    Route::get('getFaceId', [HomeController::class, 'getFaceId']);
-    Route::get('getFingerId', [HomeController::class, 'getFingerId']);
+    Route::post('getFaceId', [HomeController::class, 'getFaceId']);
+    Route::post('getFingerId', [HomeController::class, 'getFingerId']);
+
+    //set user location
+    Route::post('setUserLocation', [HomeController::class, 'setUserLocation']);
+    Route::get('getUserLocation', [HomeController::class, 'getUserLocation']);
 
     //Card
     Route::post('addCard', [HomeController::class, 'addCard']);
@@ -81,11 +90,14 @@ Route::prefix('app')->middleware('jwt.auth')->group(function(){
     Route::delete('removeCard/{id}', [HomeController::class, 'removeCard']);
 
 
+
     //Notifications
     Route::post('createNotification', [NotificationController::class, 'createNotification']);
     Route::get('getNotifications', [NotificationController::class, 'getNotifications']);
     Route::get('getNotification/{id}', [NotificationController::class, 'getNotification']);
     Route::post('readNotification/{id}', [NotificationController::class, 'readNotification']);
+    Route::get('totalNotification', [NotificationController::class, 'totalNotification']);
+
 
     //Add to cart
     Route::post('addToCart', [AddToCartController::class, 'addToCart']);
@@ -93,12 +105,14 @@ Route::prefix('app')->middleware('jwt.auth')->group(function(){
     Route::get('getCartById/{id}', [AddToCartController::class, 'getCartById']);
     Route::delete('removeCart/{id}', [AddToCartController::class, 'removeCart']);
     Route::post('updateCart/{id}', [AddToCartController::class, 'updateCart']);
+    Route::delete('deleteAllCart', [AddToCartController::class, 'deleteAllCart']);
 
     //Wishlist
     Route::post('addToWishlist', [WishlistController::class, 'addToWishlist']);
     Route::get('getWishlist', [WishlistController::class, 'getWishlist']);
     Route::get('getWishlistById/{id}', [WishlistController::class, 'getWishlistById']);
     Route::delete('removeWishlist/{id}', [WishlistController::class, 'removeWishlist']);
+    Route::delete('deleteAllWishlist', [WishlistController::class, 'deleteAllWishlist']);
 
     //Profile
     Route::get('getProfile', [HomeController::class, 'getProfile']);
@@ -110,12 +124,17 @@ Route::prefix('app')->middleware('jwt.auth')->group(function(){
     Route::get('personalShopper', [HomeController::class, 'personalShopper']);
     Route::post('makeShopper', [HomeController::class, 'makeShopper']);
     Route::delete('removeShopper', [HomeController::class, 'removeShopper']);
+    Route::get('shopperDetails/{id}', [HomeController::class, 'shopperDetails']);
+    Route::post('updateUserPhoto', [HomeController::class, 'updateUserPhoto']);
 
     //All Notification
     Route::get('getAllNotifications', [HomeController::class, 'getAllNotifications']);
 
     //All Transactions
     // Route::get('getAllTransactions', [HomeController::class, 'getAllTransactions']);
+
+    //recommendation Product
+    Route::get('recommendationProduct', [HomeController::class, 'recommendationProduct']);
 
     //About App
     Route::get('aboutApp', [HomeController::class, 'aboutApp']);
@@ -125,23 +144,55 @@ Route::prefix('app')->middleware('jwt.auth')->group(function(){
 
     //Payment
     Route::prefix('payment')->middleware('jwt.auth')->group(function() {
+        // Card payments
         Route::post('create-intent', [PaymentController::class, 'createPaymentIntent']);
         Route::post('confirm', [PaymentController::class, 'confirmPayment']); 
         Route::get('status/{payment_id}', [PaymentController::class, 'getPaymentStatus']);
         Route::post('reorder/{order_id}', [PaymentController::class, 'reorder']);
         Route::get('getAllTransactions', [PaymentController::class, 'getAllTransactions']);
+        
+        Route::post('create-crypto', [PaymentController::class, 'createCryptoPayment']);
+        Route::post('confirm-crypto', [PaymentController::class, 'confirmCryptoPayment']);
+        Route::post('crypto/webhook', [PaymentController::class, 'handleCryptoWebhook'])
+            ->name('api.payments.crypto.webhook')
+            ->withoutMiddleware(['jwt.auth']); // Webhook needs to be public
+            
+        // Crypto payment callbacks
+        Route::get('crypto/success', [PaymentController::class, 'cryptoPaymentSuccess'])
+            ->name('api.payments.crypto.success')
+            ->withoutMiddleware(['jwt.auth']);
+            
+        Route::get('crypto/cancel', [PaymentController::class, 'cryptoPaymentCancel'])
+            ->name('api.payments.crypto.cancel')
+            ->withoutMiddleware(['jwt.auth']);
     });
 
     //Orders
     Route::prefix('orders')->middleware('jwt.auth')->group(function() {
         Route::get('/', [OrderController::class, 'getOrders']);           
         Route::get('/{id}', [OrderController::class, 'getOrderDetails']); 
-        Route::post('/{id}/status', [OrderController::class, 'updateOrderStatus'])->middleware('admin');
+        Route::post('/{id}/status', [OrderController::class, 'updateOrderStatus']);
         Route::get('/{id}/track', [OrderController::class, 'trackOrder']);
+        Route::post('pickedUpItems', [OrderController::class, 'pickedUpItems']);
     });
 
 });
 
+
+Route::prefix('shopper')->middleware('jwt.auth')->group(function(){
+    Route::get('recentOrders', [ShopperController::class, 'recentOrders']);
+    Route::get('recentOrderDetails/{id}', [ShopperController::class, 'recentOrderDetails']);
+    Route::get('pendingOrders', [ShopperController::class, 'pendingOrders']);
+    Route::get('pendingOrderDetails/{id}', [ShopperController::class, 'pendingOrderDetails']);
+    Route::get('newOrders', [ShopperController::class, 'newOrders']);
+    Route::get('newOrderDetails/{id}', [ShopperController::class, 'newOrderDetails']);
+    Route::post('orderPickedUp', [ShopperController::class, 'orderPickedUp']);
+    Route::post('sendDeliveryRequest', [ShopperController::class, 'sendDeliveryRequest']);
+    Route::post('getUserAndShopperlatLong', [ShopperController::class, 'getUserAndShopperlatLong']);
+    Route::post('activeInactiveShopper', [ShopperController::class, 'activeInactiveShopper']);
+    Route::get('allShopperOrders', [OrderController::class, 'allShopperOrders']);
+    Route::get('getShopperStatus', [ShopperController::class, 'getShopperStatus']);
+});
 
 
 //Social login 
@@ -150,9 +201,23 @@ Route::prefix('social')->group(function () {
     Route::post('google/callback', [AuthController::class, 'googleCallback']);
 });
 
-
 //Admin Routes
 Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], function(){
+
+    //AllProduct
+    Route::get('allProducts', [HomeController::class, 'allProductsForAdmin']);
+
+    //AllTransaction
+    Route::get('allTransactions', [HomeController::class, 'allTransactionsForAdmin']);
+    Route::get('allTransactions/{id}', [HomeController::class, 'transactionDetails']);
+
+    //AllStore
+    Route::get('allStores', [HomeController::class, 'allStoresForAdmin']);
+
+    //AllShopper
+    Route::get('allShoppersForAdmin', [ShopperController::class, 'allShoppersForAdmin']);
+    Route::post('updateShopper', [ShopperController::class, 'updateShopper']);
+
     Route::controller(StoreController::class)->group(function(){
         Route::post('addStore', 'addStore')->name('admin.addStore');
     });
@@ -192,6 +257,17 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
         Route::delete('deleteBanner/{id}', 'deleteBanner');
     });
 
+    Route::controller(OrderController::class)->group(function(){
+        Route::get('newOrder', 'newOrder');
+        Route::get('pendingOrder', 'pendingOrder');
+        Route::get('pendingOrder', 'pendingOrder');
+        Route::get('completeOrder', 'completeOrder');
+        Route::get('orderDetailsForAdmin/{id}', 'orderDetailsForAdmin');
+        Route::delete('deleteOrder/{id}', 'deleteOrder');
+        Route::get('allOrders', 'allOrders');
+
+    });
+
     //About Us
     Route::post('setAboutUs', [AboutUsController::class, 'setAboutUs']);
     Route::get('getAboutUs', [AboutUsController::class, 'getAboutUs']);
@@ -205,6 +281,17 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
 
     //Update Admin Profile
     Route::post('updateAdminProfile', [HomeController::class, 'updateAdminProfile']);
+    Route::post('updateAdminPhoto', [HomeController::class, 'updateAdminPhoto']);
+
+    //Dashboard
+    Route::get('dashboard', [HomeController::class, 'dashboard']);
+
+    //total user
+    Route::get('totalUser', [HomeController::class, 'totalUser']);
+
+    Route::controller(NotificationController::class)->group(function(){
+        Route::post('sendNormalNotifications', 'sendBulkNormalNotification');
+    });
 
 
     // Route::get('kroger/products', [KrogerController::class, 'fetchKrogerProducts']);
@@ -218,4 +305,5 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
     // Route::get('kroger/stores', [KrogerController::class, 'fetchKrogerStores']);
     // Route::get('kroger/products/stores/{store}', [KrogerController::class, 'searchProductByStore']);
 });
+
 

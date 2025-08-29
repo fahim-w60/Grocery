@@ -83,12 +83,21 @@ class AddToCartController extends Controller
     
         $totalProducts = $formatted->sum('quantity');
         $totalPrice = $formatted->sum('item_total');
+        
+        // Calculate delivery charges and tax
+        $deliveryCharges = $totalPrice > 0 ? 5.00 : 0.00; // $5 delivery charge if cart has items
+        $taxRate = 0.08; // 8% tax rate
+        $tax = round($totalPrice * $taxRate, 2);
+        $grandTotal = round($totalPrice + $deliveryCharges + $tax, 2);
     
         return response()->json([
             'status'         => true,
             'cart'           => $formatted->values(), // Reset array keys after filtering
             'total_products' => $totalProducts,
             'total_price'    => round($totalPrice, 2),
+            'delivery_charges' => $deliveryCharges,
+            'tax'            => $tax,
+            'grand_total'    => $grandTotal,
         ]);
     }
 
@@ -167,6 +176,22 @@ class AddToCartController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Cart item updated successfully',
+        ]);
+    }
+
+    public function deleteAllCart()
+    {
+        $user = Auth::user();
+        $today = now()->format('Y-m-d');
+        
+        $deleted = Cart::where('user_id', $user->id)
+            ->whereDate('created_at', '!=', $today)
+            ->delete();
+            
+        return response()->json([
+            'status' => true,
+            'message' => 'Successfully removed '.$deleted.' old cart item(s) not from today',
+            'items_removed' => $deleted
         ]);
     }
 }

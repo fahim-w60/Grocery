@@ -37,4 +37,15 @@ class AboutUsController extends Controller
             'data' => $aboutUs ?? ['content' => '']
         ]);
     }
+
+    public function getAboutApp()
+    {
+        $aboutUs = Aboutus::first();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'About us content retrieved successfully',
+            'data' => $aboutUs ?? ['content' => '']
+        ]);
+    }
 }

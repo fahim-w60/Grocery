@@ -24,6 +24,7 @@ class NotificationController extends Controller
         return response()->json([
             'status' => true,
             'notifications' => $notifications,
+            'icon' => asset('uploads/notification/notification.jpeg'),
         ]);
     }
 
@@ -49,9 +50,12 @@ class NotificationController extends Controller
     public function readNotification($id)
     {
         $user = auth()->user();
+       // dd($user);
         $notification = Notification::where('user_id', $user->id)
             ->where('id', $id)
             ->first();
+
+           // dd($notification);
 
         if (!$notification) {
             return response()->json(['status' => false, 'message' => 'Notification not found'], 404);
@@ -75,10 +79,9 @@ class NotificationController extends Controller
         $validated = $request->validate([
             'title' => 'nullable|string',
             'message' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'type' => 'required|string|in:shopper arrive,order picked up,normal notification',
             'order_id' => 'nullable|integer',
-            'shopper_id' => 'nullable|integer',
+            'shopper_id' => 'nullable|integer|min:1',
         ]);
 
         $user = auth()->user();
@@ -128,4 +131,17 @@ class NotificationController extends Controller
             'notification' => $notification,
         ]);
     }
+
+   public function totalNotification()
+   {
+        $user = auth()->user();
+        $notification = Notification::where('user_id', $user->id)
+            ->whereNull('read_at')
+            ->count();
+            
+        return response()->json([
+            'status' => true,
+            'total' => $notification,
+        ]);
+   }
 }

@@ -94,4 +94,14 @@ class FAQcontroller extends Controller
             'message' => 'FAQ deleted successfully'
         ]);
     }
+
+    public function getAllFaqApp()
+    {
+        $faqs = Faq::all();
+        
+        return response()->json([
+            'status' => true,
+            'data' => $faqs
+        ]);
+    }
 }

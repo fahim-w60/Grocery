@@ -11,6 +11,49 @@ use Illuminate\Support\Facades\Log;
 
 class MessageController extends Controller
 {
+    private function buildImageUrl($photo)
+    {
+        if (!empty($photo) && !filter_var($photo, FILTER_VALIDATE_URL)) {
+            return asset($photo);
+        }
+        if (!empty($photo)) {
+            return $photo;
+        }
+        return asset('uploads/profiles/no_image.jpeg');
+    }
+
+    public function message($id)
+    {
+        $authId = Auth::id();
+
+        $messages = Message::with(['sender:id,name', 'receiver:id,name'])
+            ->where(function($q) use ($authId, $id) {
+                $q->where('sender_id', $authId)
+                  ->where('receiver_id', $id);
+            })
+            ->orWhere(function($q) use ($authId, $id) {
+                $q->where('sender_id', $id)
+                  ->where('receiver_id', $authId);
+            })
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $messages = $messages->map(function ($message) {
+            $senderPhoto = $message->sender ? $message->sender->photo : null;
+            $message->image = $this->buildImageUrl($senderPhoto);
+            return $message;
+        });
+
+        $user = Auth::user();
+        $image = $this->buildImageUrl($user ? $user->photo : null);
+
+        return response()->json([
+            'success' => true,
+            'messages' => $messages
+            
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -98,7 +141,5 @@ class MessageController extends Controller
             'count' => $count
         ]);
     }
-   
-
 
 }

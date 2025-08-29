@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use Exception;
 use Carbon\Carbon;
+use App\Models\Notification;
 
 class OrderController extends Controller
 {
@@ -25,6 +26,11 @@ class OrderController extends Controller
                 'success' => true,
                 'data' => $orders->map(function($order) {
                     $statusTimeline = [
+                        'order_cancelled' => [
+                            'label' => 'Order Cancelled',
+                            'completed' => $order->cancelled_at !== null,
+                            'timestamp' => $order->cancelled_at ? Carbon::parse($order->cancelled_at)->format('Y-m-d\TH:i:s') : null
+                        ],
                         'order_placed' => [
                             'label' => 'Order Placed',
                             'completed' => true,
@@ -154,7 +160,7 @@ class OrderController extends Controller
             ]);
 
             $order = Order::find($id);
-
+            //dd($order);
             if (!$order) {
                 return response()->json([
                     'success' => false,
@@ -165,15 +171,36 @@ class OrderController extends Controller
             // Update status and set timestamp
             $updateData = ['status' => $request->status];
             $currentTime = now();
+
+            if ($request->status == 'order_cancelled') {
+                $updateData['cancelled_at'] = $currentTime;
+            }
             
             // Set timestamps based on current status and handle skipped statuses
             switch ($request->status) {
                 case 'order_confirmed':
                     $updateData['confirmed_at'] = $currentTime;
+                    Notification::create([
+                        'user_id' => $order->user_id,
+                        'title' => 'Your order has been confirmed',
+                        'message' => 'Your order has been confirmed. Total $' . number_format($order->total, 2),
+                        'image' => null,
+                        'type' => 'normal notification',
+                        'order_id' => $order->id,
+                    ]);
                     break;
                 case 'order_pickedup':
-                    $updateData['confirmed_at'] = $order->confirmed_at ?? $currentTime;
+                    // $updateData['confirmed_at'] = $order->confirmed_at ?? $currentTime;
                     $updateData['picked_up_at'] = $currentTime;
+                    Notification::create([
+                        'user_id' => $order->user_id,
+                        'title' => 'Your order has been picked up',
+                        'message' => 'Your order has been picked up. Total $' . number_format($order->total, 2),
+                        'image' => null,
+                        'type' => 'order pickedup',
+                        'order_id' => $order->id,
+                        'shopper_id' => $order->shopper_id,
+                    ]);
                     break;
                 case 'out_for_delivery':
                     $updateData['confirmed_at'] = $order->confirmed_at ?? $currentTime;
@@ -181,13 +208,29 @@ class OrderController extends Controller
                     $updateData['out_for_delivery_at'] = $currentTime;
                     break;
                 case 'order_delivered':
-                    $updateData['confirmed_at'] = $order->confirmed_at ?? $currentTime;
-                    $updateData['picked_up_at'] = $order->picked_up_at ?? $currentTime;
-                    $updateData['out_for_delivery_at'] = $order->out_for_delivery_at ?? $currentTime;
                     $updateData['delivered_at'] = $currentTime;
-                    break;
-                case 'order_cancelled':
-                    // If cancelling, keep existing timestamps but update status
+                    
+                    // Update shopper's total_delivery count
+                    if ($order->shopper_id) {
+                        $shopper = \App\Models\User::find($order->shopper_id);
+                        if ($shopper) {
+                            $shopper->increment('total_delivery');
+                        }
+                    }
+                    
+                    // Create delivery notification for specific users (1 and 30)
+                    $userIds = [1, 30];
+                    foreach ($userIds as $userId) {
+                        Notification::create([
+                            'user_id' => $userId,
+                            'title' => 'Order Delivered',
+                            'message' => 'order #' . $order->order_number . ' has been delivered successfully!',
+                            'image' => null,
+                            'type' => 'order_delivered',
+                            'order_id' => $order->id,
+                            'shopper_id' => $order->shopper_id,
+                        ]);
+                    }
                     break;
                 case 'order_placed':
                     // If reverting to placed, clear all timestamps
@@ -237,6 +280,11 @@ class OrderController extends Controller
             }
 
             $statusTimeline = [
+                'order_cancelled' => [
+                    'label' => 'Order Cancelled',
+                    'completed' => $order->cancelled_at !== null,
+                    'timestamp' => $order->cancelled_at ? Carbon::parse($order->cancelled_at)->format('Y-m-d\TH:i:s') : null
+                ],
                 'order_placed' => [
                     'label' => 'Order Placed',
                     'completed' => true,
@@ -299,4 +347,262 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
+    public function newOrder(Request $request)
+    {
+        $validatedData = $request->validate([
+            'per_page' => 'sometimes|integer|min:1|max:100',
+            'page' => 'sometimes|integer|min:1',
+        ]);
+
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $newOrder = Order::where('status', 'order_placed')->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'success' => true,
+            'data' => $newOrder->items(),
+        ]);
+    }
+
+    public function pendingOrder(Request $request)
+    {
+        $validatedData = $request->validate([
+            'per_page' => 'sometimes|integer|min:1|max:100',
+            'page' => 'sometimes|integer|min:1',
+        ]); 
+
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $newOrder = Order::where('status', 'order_confirmed')->orWhere('status','order_pickedup')->orWhere('status','out_for_delivery')->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'success' => true,
+            'data' => $newOrder->items(),
+        ]);
+    }
+
+    public function completeOrder(Request $request)
+    {
+        $validatedData = $request->validate([
+            'per_page' => 'sometimes|integer|min:1|max:100',
+            'page' => 'sometimes|integer|min:1',
+        ]);
+
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $newOrder = Order::where('status', 'order_delivered')->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'success' => true,
+            'data' => $newOrder->items(),
+        ]);
+    }
+
+    public function orderDetailsForAdmin($id)
+    {
+        $order = Order::where('id', $id)->with(['orderItems.product', 'payments'])->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => $order,
+        ]);
+    }
+
+    public function deleteOrder($id)
+    {
+        $order = Order::where('id', $id)->delete();
+        return response()->json([
+            'success' => true,
+            'message' => 'Order deleted successfully',
+        ]);
+    }
+
+    public function allOrders(Request $request)
+    {
+        $validatedData = $request->validate([
+            'status' => 'sometimes|string|in:new,pending,complete,cancel',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+            'page' => 'sometimes|integer|min:1',
+        ]);
+
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $query = Order::with([
+            'user:id,name,photo',
+            'orderItems' => function($q) {
+                $q->select('id','order_id','product_id','product_name','unit_price','quantity','total_price','product_notes','storeName','productId','images');
+            }
+        ]);
+
+        if ($request->filled('status')) {
+            switch ($request->status) {
+                case 'new':
+                    $query->where('status', 'order_placed');
+                    break;
+                case 'pending':
+                    $query->whereIn('status', ['order_confirmed', 'order_pickedup', 'out_for_delivery']);
+                    break;
+                case 'complete':
+                    $query->where('status', 'order_delivered');
+                    break;
+                case 'cancel':
+                    $query->where('status', 'order_cancelled');
+                    break;
+            }
+        }
+
+        $orders = $query->orderBy('id', 'desc')->paginate($perPage, ['*'], 'page', $page);
+
+        $data = $orders->getCollection()->map(function($order) {
+            return [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'price' => $order->total,
+                'tax' => $order->tax,
+                'delivery_charges' => $order->delivery_charges,
+                'created_at' => $order->created_at,
+                'user' => $order->user ? [
+                    'id' => $order->user->id,
+                    'name' => $order->user->name,
+                    'photo' => asset($order->user->photo ?: 'uploads/profiles/no_image.jpeg'),
+                ] : null,
+                'order_items' => $order->orderItems->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'product_name' => $item->product_name,
+                        'unit_price' => (float)$item->unit_price,
+                        'quantity' => (int)$item->quantity,
+                        'total_price' => (float)$item->total_price,
+                        'product_notes' => $item->product_notes,
+                        'store_name' => $item->storeName ?? null,
+                        'product_external_id' => $item->productId ?? null,
+                        'images' => $item->images ?? asset('uploads/profiles/no_image.jpeg'),
+                    ];
+                })
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'total' => $orders->total(),
+            'pagination' => [
+                'current_page' => $orders->currentPage(),
+                'per_page' => $orders->perPage(),
+                'last_page' => $orders->lastPage(),
+            ],
+            'data' => $data->values(),
+        ]);
+    }
+
+public function pickedUpItems(Request $request)
+{
+    $validatedData = $request->validate([
+        'order_id' => 'required|exists:orders,id',
+    ]);
+
+    try {
+        $order = Order::findOrFail($validatedData['order_id']);
+
+        // Get all picked up item records for this order
+        $pickedUpRecords = \DB::table('picked_up_items')
+            ->where('order_id', $order->id)
+            ->get();
+
+        // Collect all picked up item IDs (flattened)
+        $pickedUpItemIds = $pickedUpRecords->flatMap(function($record) {
+            return collect(explode(',', $record->order_item_id))
+                ->map(fn($id) => (int) trim($id))
+                ->filter(fn($id) => $id > 0);
+        })->unique()->values();
+
+        // Fetch item details
+        $pickedUpItems = OrderItem::whereIn('id', $pickedUpItemIds)->get();
+
+        // Build the response data array
+        $data = $pickedUpItems->map(function($item) use ($order) {
+            return [
+                'id' => $item->id,
+                'product_name' => $item->product_name,
+                'product_image' => $item->images,
+                'unit_price' => (float) $item->unit_price,
+                'quantity' => (int) $item->quantity,
+                'total' => (float) $item->total_price,
+                'picked_at' => $order->picked_up_at ? Carbon::parse($order->picked_up_at)->format('Y-m-d H:i:s') : null,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Picked up items retrieved successfully',
+            'data' => $data,
+        ]);
+
+    } catch (Exception $e) {
+        Log::error('Error fetching picked up items: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => 'Failed to fetch picked up items.'], 500);
+    }
+}
+public function allShopperOrders(Request $request)
+{
+    $validatedData = $request->validate([
+        'status' => 'sometimes|string|in:new,pending,complete,cancel',
+        'per_page' => 'sometimes|integer|min:1|max:100',
+        'page' => 'sometimes|integer|min:1',
+    ]);
+
+    $perPage = $request->input('per_page', 20);
+    $page = $request->input('page', 1);
+    $shopperId = auth()->id();
+
+    $query = Order::where('shopper_id', $shopperId)->with([
+        'user:id,name,email'
+    ]);
+
+    if ($request->filled('status')) {
+        switch ($request->status) {
+            case 'new':
+                $query->where('status', 'order_placed');
+                break;
+            case 'pending':
+                $query->whereIn('status', ['order_confirmed', 'order_pickedup', 'out_for_delivery']);
+                break;
+            case 'complete':
+                $query->where('status', 'order_delivered');
+                break;
+            case 'cancel':
+                $query->where('status', 'order_cancelled');
+                break;
+        }
+    }
+
+    $orders = $query->orderBy('id', 'desc')->paginate($perPage, ['*'], 'page', $page);
+
+    $data = $orders->getCollection()->map(function($order) {
+        return [
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'status' => $order->status,
+            'created_at' => $order->created_at,
+            'updated_at' => $order->updated_at,
+            'total' => $order->total,
+            'user' => $order->user ? [
+                'user_id' => $order->user->id,
+                'name' => $order->user->name,
+                'email' => $order->user->email,
+            ] : null,
+        ];
+    });
+
+    return response()->json([
+        'success' => true,
+        'data' => $data->values(),
+    ]);
+}
 }

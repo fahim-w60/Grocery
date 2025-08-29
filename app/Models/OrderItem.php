@@ -18,7 +18,10 @@ class OrderItem extends Model
         'unit_price',
         'quantity',
         'total_price',
-        'product_notes'
+        'product_notes',
+        'storeName',
+        'productId',
+        'images'
     ];
 
     public function order()
