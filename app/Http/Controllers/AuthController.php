@@ -13,6 +13,10 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\VerifyRequest;
 use App\Http\Requests\Auth\ForgetPasswordRequest;
 use App\Http\Requests\Auth\ChangePasswordRequest;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Tymon\JWTAuth\Exceptions\JWTException;
 use Exception;
 
 
@@ -194,5 +198,29 @@ class AuthController extends Controller
     public function googleCallback()
     {
         $result = $this->authenticationService->googleCallback();
+    }
+
+    public function verifyToken(Request $request)
+    {
+        try {
+            $token = $request->bearerToken() ?? $request->input('token');
+            if (!$token) {
+                return response()->json(['success' => false, 'message' => 'Token not provided.'], 400);
+            }
+
+            $payload = JWTAuth::setToken($token)->getPayload();
+            return response()->json([
+                'success' => true,
+                'message' => 'Token is active.',
+                'expires_at' => $payload->get('exp'),
+                'user_id' => $payload->get('sub'),
+            ]);
+        } catch (TokenExpiredException $e) {
+            return response()->json(['success' => false, 'message' => 'Token has expired.'], 401);
+        } catch (TokenInvalidException $e) {
+            return response()->json(['success' => false, 'message' => 'Token is invalid.'], 401);
+        } catch (JWTException $e) {
+            return response()->json(['success' => false, 'message' => 'Token is absent or invalid.'], 401);
+        }
     }
 }
