@@ -38,12 +38,14 @@ Route::prefix('auth')->group(function () {
     Route::post('verify', [AuthController::class, 'verify']);
     Route::post('forget_password', [AuthController::class, 'forgetPassword']);
     Route::post('resend_otp', [AuthController::class, 'resendOTP']);
+    Route::post('verify-token', [AuthController::class, 'verifyToken']);
 
     Route::middleware('jwt.auth')->group(function () {
         //Auth Routes
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('profile', [AuthController::class, 'profile']);
         Route::post('change_password', [AuthController::class, 'chnagePassword']);
+
     });
 });
 

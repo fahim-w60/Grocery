@@ -79,7 +79,7 @@ class AddToCartController extends Controller
                 'created_at'    => $item->created_at,
                 'updated_at'    => $item->updated_at,
             ];
-        })->filter(); // This will remove any null values from the collection
+        })->filter(); 
     
         $totalProducts = $formatted->sum('quantity');
         $totalPrice = $formatted->sum('item_total');

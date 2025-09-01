@@ -79,10 +79,10 @@ class ShopperController extends Controller
                 ], 404);
             }
 
-            // Compute nearest store to the authenticated user's location
+           
             $nearestStore = $this->nearestStoreForOrder($order, $auth);
 
-            // Prepare coordinates and distances
+           
             $authLat = optional($auth->userlocations)->latitude;
             $authLng = optional($auth->userlocations)->longitude;
             $custLat = optional($order->user->userlocations)->latitude;
@@ -721,7 +721,7 @@ public function allShoppersForAdmin(Request $request)
                 'message' => $message,
                 'image' => null,
                 'type' => 'shopper arrive',
-                'order_id' => $order->id,
+                'order_id' => 53,
                 'shopper_id' => $auth->id,
             ]);
 

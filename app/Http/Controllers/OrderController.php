@@ -467,6 +467,8 @@ class OrderController extends Controller
                 'tax' => $order->tax,
                 'delivery_charges' => $order->delivery_charges,
                 'created_at' => $order->created_at,
+                'shopper_id' => $order->shopper_id,
+                'shopper_name' => $order->shopper ? $order->shopper->name : null,
                 'user' => $order->user ? [
                     'id' => $order->user->id,
                     'name' => $order->user->name,
